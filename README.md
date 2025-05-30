@@ -46,7 +46,7 @@ chrome-ext-ai-mode-queries/
 1. **Create MongoDB Database**
    ```bash
    # Get MongoDB connection string from MongoDB Atlas or local instance
-   # Example: mongodb+srv://username:password@cluster.mongodb.net/ai-mode-queries
+   # Example: mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/ai-mode-queries
    ```
 
 2. **Deploy to Vercel**
@@ -169,7 +169,7 @@ Response: {
 
 Create `server/.env`:
 ```env
-MONGODB_URI=mongodb+srv://user:pass@cluster.mongodb.net/ai-mode-queries
+MONGODB_URI=mongodb+srv://YOUR_USERNAME:YOUR_PASSWORD@YOUR_CLUSTER.mongodb.net/ai-mode-queries
 PORT=3000
 NODE_ENV=production
 ```
