@@ -18,6 +18,7 @@ app.use(express.json({ limit: '10mb' }));
 
 // MongoDB connection
 let db;
+let mongoClient;
 const MONGODB_URI = process.env.MONGODB_URI;
 
 if (!MONGODB_URI) {
@@ -25,19 +26,30 @@ if (!MONGODB_URI) {
   process.exit(1);
 }
 
-// Connect to MongoDB
-MongoClient.connect(MONGODB_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-})
-.then(client => {
-  console.log('Connected to MongoDB');
-  db = client.db('ai-mode-queries');
-})
-.catch(error => {
-  console.error('MongoDB connection error:', error);
-  process.exit(1);
-});
+// Database connection check middleware
+const ensureDbConnection = async (req, res, next) => {
+  if (!db) {
+    try {
+      if (!mongoClient) {
+        console.log('Connecting to MongoDB...');
+        mongoClient = new MongoClient(MONGODB_URI, {
+          useNewUrlParser: true,
+          useUnifiedTopology: true,
+        });
+        await mongoClient.connect();
+        db = mongoClient.db('ai-mode-queries');
+        console.log('Connected to MongoDB');
+      }
+    } catch (error) {
+      console.error('MongoDB connection error:', error);
+      return res.status(500).json({
+        error: 'Database connection failed',
+        message: error.message
+      });
+    }
+  }
+  next();
+};
 
 // Health check endpoint
 app.get('/', (req, res) => {
@@ -49,7 +61,7 @@ app.get('/', (req, res) => {
 });
 
 // Store AI search query
-app.post('/api/ai-search', async (req, res) => {
+app.post('/api/ai-search', ensureDbConnection, async (req, res) => {
   try {
     const { uid, query, full_url, ts } = req.body;
     
@@ -92,7 +104,7 @@ app.post('/api/ai-search', async (req, res) => {
 });
 
 // Get queries for a specific user
-app.get('/api/queries/:uid', async (req, res) => {
+app.get('/api/queries/:uid', ensureDbConnection, async (req, res) => {
   try {
     const { uid } = req.params;
     const { limit = 100, skip = 0 } = req.query;
@@ -137,7 +149,7 @@ app.get('/api/queries/:uid', async (req, res) => {
 });
 
 // Get all queries (for admin/analytics)
-app.get('/api/queries', async (req, res) => {
+app.get('/api/queries', ensureDbConnection, async (req, res) => {
   try {
     const { limit = 50, skip = 0, search } = req.query;
     
@@ -179,7 +191,7 @@ app.get('/api/queries', async (req, res) => {
 });
 
 // Statistics endpoint
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', ensureDbConnection, async (req, res) => {
   try {
     const totalQueries = await db.collection('queries').countDocuments();
     const uniqueUsers = await db.collection('queries').distinct('uid').then(arr => arr.length);
